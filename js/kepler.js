@@ -41,27 +41,48 @@
    * We show inner planets where elliptical shape is most visible.
    */
   const planets = [
-    { name: 'Mercury', a: 0.387, e: 0.2056, color: '#9ca3af', size: 4  },
-    { name: 'Venus',   a: 0.723, e: 0.0068, color: '#fbbf24', size: 5  },
-    { name: 'Earth',   a: 1.000, e: 0.0167, color: '#60a5fa', size: 5  },
-    { name: 'Mars',    a: 1.524, e: 0.0934, color: '#f87171', size: 5  }
+    { name: 'Mercury', a: 0.387,  e: 0.2056, color: '#9ca3af', size: 3  },
+    { name: 'Venus',   a: 0.723,  e: 0.0068, color: '#fbbf24', size: 4  },
+    { name: 'Earth',   a: 1.000,  e: 0.0167, color: '#60a5fa', size: 4  },
+    { name: 'Mars',    a: 1.524,  e: 0.0934, color: '#f87171', size: 4  },
+    { name: 'Jupiter', a: 5.203,  e: 0.0489, color: '#fb923c', size: 6  },
+    { name: 'Saturn',  a: 9.537,  e: 0.0565, color: '#d4a056', size: 5.5 },
+    { name: 'Uranus',  a: 19.191, e: 0.0457, color: '#67e8f9', size: 4.5 },
+    { name: 'Neptune', a: 30.069, e: 0.0113, color: '#818cf8', size: 4.5 }
   ];
 
   // Compute periods from Kepler's 3rd law: T = a^(3/2) years
   // Then convert to angular rate: omega_base = 2π / T
+  // Earth orbits in ~10 seconds at 1x speed
+  const BASE_PERIOD = 10;
   planets.forEach(p => {
-    p.T = Math.pow(p.a, 1.5);                  // Kepler's 3rd law
-    p.omegaBase = (2 * Math.PI) / (p.T * 8);   // scaled so Earth orbits in ~8 seconds at 1x
+    p.T = Math.pow(p.a, 1.5);                              // Kepler's 3rd law
+    p.omegaBase = (2 * Math.PI) / (p.T * BASE_PERIOD);     // angular rate
+
+    // Exaggerate eccentricity for display so elliptical shape is clearly visible.
+    // Real eccentricities are tiny (Venus 0.007, Earth 0.017) and look circular.
+    // We amplify them for pedagogical clarity while showing real values in the table.
+    // Formula: e_display = 3e + 0.35, capped at 0.6
+    // This gives every orbit a visibly elliptical shape while preserving relative ordering.
+    p.displayE = Math.min(p.e * 3 + 0.35, 0.6);
   });
+
+  /**
+   * Scale distance for display using power-law compression.
+   * r_display = a^0.5 keeps inner planets visible while fitting Neptune.
+   */
+  function scaleDistance(a) {
+    return Math.pow(a, 0.5);
+  }
 
   function computeLayout() {
     width = canvas.width / (window.devicePixelRatio || 1);
     height = canvas.height / (window.devicePixelRatio || 1);
-    // Sun slightly left of center to show elliptical shape better
-    centerX = width * 0.45;
+    centerX = width / 2;
     centerY = height / 2;
-    // Scale: Mars orbit should fit comfortably
-    scale = Math.min(width, height) * 0.26;
+    // Scale so Neptune's orbit fits with margin
+    const maxDisplayR = scaleDistance(planets[planets.length - 1].a);
+    scale = Math.min(width, height) * 0.42 / maxDisplayR;
   }
 
   /**
@@ -105,17 +126,18 @@
    * 5. Convert polar to Cartesian
    */
   function getPlanetPosition(planet, t) {
-    const M = planet.omegaBase * t;                     // Mean anomaly
-    const E = solveKeplersEquation(M % (2 * Math.PI), planet.e);  // Eccentric anomaly
-    const theta = eccentricToTrue(E, planet.e);         // True anomaly
-    const r = planet.a * (1 - planet.e * Math.cos(E));  // Radial distance
+    const e = planet.displayE;                           // Use exaggerated eccentricity for display
+    const M = planet.omegaBase * t;                      // Mean anomaly
+    const E = solveKeplersEquation(M % (2 * Math.PI), e);  // Eccentric anomaly
+    const theta = eccentricToTrue(E, e);                 // True anomaly
+    const r = planet.a * (1 - e * Math.cos(E));          // Radial distance (display-exaggerated)
 
-    // Convert to display coordinates
-    // Sun is at one focus. The center of the ellipse is offset from the focus by a·e
-    const x = r * Math.cos(theta);
-    const y = r * Math.sin(theta);
+    // Apply power-law scaling for display, then convert to Cartesian
+    const displayR = scaleDistance(r) * scale;
+    const x = displayR * Math.cos(theta);
+    const y = displayR * Math.sin(theta);
 
-    return { x, y, r, theta, M: M % (2 * Math.PI) };
+    return { x, y, r, theta, displayR, M: M % (2 * Math.PI) };
   }
 
   function drawStarfield() {
@@ -159,33 +181,39 @@
   function drawEllipseOrbit(planet) {
     if (!options.showOrbits) return;
 
-    const a = planet.a * scale;
-    const b = a * Math.sqrt(1 - planet.e * planet.e);  // semi-minor axis: b = a√(1-e²)
-    const focusOffset = planet.a * planet.e * scale;     // distance from center to focus
-
+    // Draw orbit by tracing points (needed because power-law scaling
+    // distorts the ellipse, so we can't use ctx.ellipse directly)
+    const e = planet.displayE;
+    const numPoints = 180;
     ctx.strokeStyle = planet.color;
     ctx.globalAlpha = 0.2;
     ctx.lineWidth = 0.8;
     ctx.beginPath();
-    ctx.ellipse(
-      centerX + focusOffset,  // Ellipse center is offset from Sun (focus) by a·e
-      centerY,
-      a, b,
-      0, 0, Math.PI * 2
-    );
+    for (let i = 0; i <= numPoints; i++) {
+      const angle = (i / numPoints) * Math.PI * 2;
+      // Ellipse in polar form: r = a(1-e²) / (1 + e·cos(θ))
+      const r = planet.a * (1 - e * e) / (1 + e * Math.cos(angle));
+      const dr = scaleDistance(r) * scale;
+      const px = centerX + dr * Math.cos(angle);
+      const py = centerY - dr * Math.sin(angle);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
     ctx.stroke();
     ctx.globalAlpha = 1.0;
 
     // Draw second focus
     if (options.showFoci) {
-      const f2x = centerX + 2 * focusOffset;
+      // Focus position: 2·a·e from Sun, scaled
+      const focusDist = scaleDistance(2 * planet.a * e) * scale;
+      const f2x = centerX + focusDist;
       ctx.strokeStyle = planet.color;
       ctx.globalAlpha = 0.4;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(f2x, centerY, 3, 0, Math.PI * 2);
       ctx.stroke();
-      // Cross marker
       ctx.beginPath();
       ctx.moveTo(f2x - 4, centerY);
       ctx.lineTo(f2x + 4, centerY);
@@ -202,8 +230,8 @@
     const pos = getPlanetPosition(planet, time);
 
     // Draw current radius vector (Sun to planet)
-    const px = centerX + pos.x * scale;
-    const py = centerY - pos.y * scale;
+    const px = centerX + pos.x;
+    const py = centerY - pos.y;
 
     ctx.strokeStyle = planet.color;
     ctx.globalAlpha = 0.25;
@@ -214,43 +242,80 @@
     ctx.stroke();
     ctx.globalAlpha = 1.0;
 
-    // Draw swept area wedges
-    // Show two equal-time wedges at different orbital positions
-    const sweepDuration = 0.8; // seconds of animation time
-    const numSteps = 30;
+    /*
+     * Kepler's 2nd Law: Equal areas in equal times.
+     *
+     * We show two wedges per planet:
+     *   A₁ — near perihelion (closest to Sun): wide angle, short radius
+     *   A₂ — near aphelion (farthest from Sun): narrow angle, long radius
+     *
+     * Both wedges span the same time duration, so A₁ = A₂.
+     * The visual difference in shape demonstrates the law.
+     * All planets use displayE (exaggerated eccentricity) so the
+     * area difference is clearly visible even for near-circular orbits.
+     */
+    const sweepFraction = 0.06;  // fraction of orbital period for each wedge
+    const sweepDuration = sweepFraction * (planet.T * BASE_PERIOD);
+    const numSteps = 40;
     const dt = sweepDuration / numSteps;
 
-    // Wedge 1: near perihelion (close to Sun, fast)
-    // Wedge 2: near aphelion (far from Sun, slow)
+    // Perihelion: true anomaly θ = 0, so mean anomaly M = 0 → t = 0
     const perihelionStart = 0;
+    // Aphelion: true anomaly θ = π → mean anomaly M = π → t = π/ωbase
     const aphelionStart = Math.PI / planet.omegaBase;
 
-    const drawWedge = (startTime, fillColor) => {
+    const drawWedge = (startTime) => {
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
+      const points = [];
       for (let i = 0; i <= numSteps; i++) {
         const t = startTime + i * dt;
         const p = getPlanetPosition(planet, t);
-        ctx.lineTo(centerX + p.x * scale, centerY - p.y * scale);
+        const wx = centerX + p.x;
+        const wy = centerY - p.y;
+        ctx.lineTo(wx, wy);
+        points.push({ x: wx, y: wy });
       }
       ctx.closePath();
-      ctx.fillStyle = fillColor;
-      ctx.globalAlpha = 0.1;
+
+      // Fill the wedge
+      ctx.fillStyle = planet.color;
+      ctx.globalAlpha = 0.18;
       ctx.fill();
+
+      // Outline the wedge edges
+      ctx.strokeStyle = planet.color;
+      ctx.globalAlpha = 0.4;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(points[0].x, points[0].y);
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
+      ctx.stroke();
       ctx.globalAlpha = 1.0;
+
     };
 
-    // Only draw wedges for the planet with highest eccentricity visible (Mercury or Mars)
-    if (planet.e > 0.05) {
-      drawWedge(perihelionStart, planet.color);
-      drawWedge(aphelionStart, planet.color);
-    }
+    drawWedge(perihelionStart);
+    drawWedge(aphelionStart);
   }
 
   function drawPlanet(planet) {
     const pos = getPlanetPosition(planet, time);
-    const px = centerX + pos.x * scale;
-    const py = centerY - pos.y * scale;  // flip y for screen coordinates
+    const px = centerX + pos.x;
+    const py = centerY - pos.y;  // flip y for screen coordinates
+
+    // Saturn's ring
+    if (planet.name === 'Saturn') {
+      ctx.strokeStyle = '#d4a056';
+      ctx.globalAlpha = 0.5;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(px, py, planet.size + 4, planet.size * 0.3, -0.3, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+    }
 
     // Planet body
     ctx.fillStyle = planet.color;
@@ -278,23 +343,29 @@
     ctx.font = '10px sans-serif';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
     ctx.fillText('1. Orbits are ellipses (Sun at one focus)', 10, y0 + 16);
-    ctx.fillText('2. Equal areas in equal times (shaded wedges)', 10, y0 + 30);
+    ctx.fillText('2. Equal areas in equal times: A₁ = A₂ (shaded wedges)', 10, y0 + 30);
     ctx.fillText('3. T² ∝ a³ (see periods below)', 10, y0 + 44);
 
-    // Period table
+    // Period table — all 8 planets
     ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
     ctx.font = '9px monospace';
     let ty = y0 + 62;
-    ctx.fillText('Planet     a(AU)   T(yr)   T²      a³', 10, ty);
+    ctx.fillText('Planet     a(AU)    T(yr)     T²         a³', 10, ty);
     planets.forEach(p => {
-      ty += 14;
-      const T2 = (p.T * p.T).toFixed(3);
-      const a3 = (p.a * p.a * p.a).toFixed(3);
+      ty += 13;
+      const T2 = (p.T * p.T).toFixed(2);
+      const a3 = (p.a * p.a * p.a).toFixed(2);
       ctx.fillText(
-        `${p.name.padEnd(10)} ${p.a.toFixed(3)}   ${p.T.toFixed(3)}   ${T2}   ${a3}`,
+        `${p.name.padEnd(10)} ${p.a.toFixed(3).padStart(6)}   ${p.T.toFixed(2).padStart(7)}   ${T2.padStart(9)}   ${a3.padStart(9)}`,
         10, ty
       );
     });
+
+    // Scaling notes
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.font = '9px sans-serif';
+    ctx.fillText('Distances scaled (a^0.5) for visibility', 10, height - 24);
+    ctx.fillText('Eccentricities exaggerated — real values shown in table above', 10, height - 10);
   }
 
   function draw() {

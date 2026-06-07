@@ -85,6 +85,35 @@ This file tracks progress after each implementation step. Update it whenever a m
 
 **Status:** PROJECT COMPLETE — ready for submission
 
+### Session 4 — June 7, 2026 (fix-paths branch)
+
+**Phase:** Bug fixes and enhancements
+
+**Completed:**
+- **Kepler tab: added all 8 planets** (Jupiter, Saturn, Uranus, Neptune added to Mercury, Venus, Earth, Mars)
+  - Switched from linear to power-law distance scaling (a^0.5) so Neptune fits on screen while inner planets remain visible
+  - Orbit drawing changed from `ctx.ellipse()` to point-by-point tracing (needed because power-law scaling distorts ellipses)
+  - Saturn ring rendering added
+  - Law 3 data table expanded to show all 8 planets
+  - Scaling note added to canvas
+
+- **Ptolemy orbits fixed — historically accurate epicycle physics**
+  - Root cause: epicycle radii were too small and angular velocities weren't physically motivated
+  - Fixed by implementing historically accurate Ptolemaic model:
+    - Outer planets (Mars, Jupiter, Saturn): deferent rate = planet's sidereal rate, epicycle rate = Sun's rate
+    - Inner planets (Mercury, Venus): deferent rate = Sun's rate, epicycle rate = planet's sidereal rate
+    - All rates derived from real orbital periods relative to a base Sun rate
+  - Mars epicycle radius corrected from 0.19 to 0.32 (Almagest ratio 39.5/60 ≈ 0.66 of deferent)
+  - Retrograde verified numerically: Mars 9.6%, Jupiter 29.4%, Saturn 35.3% of orbit in retrograde
+  - All JS syntax checks pass
+
+**Decisions:**
+- Used Almagest-sourced epicycle-to-deferent ratios for historically faithful retrograde loops
+- Base Sun angular velocity set to 0.524 rad/s (one orbit per ~12 seconds at 1x)
+
+**Open Issues:**
+- None
+
 ---
 
 <!-- Template for future entries:

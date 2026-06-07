@@ -22,95 +22,130 @@
   const MAX_TRAIL = 600;
 
   /*
-   * Ptolemaic planetary data.
+   * Ptolemaic planetary data — historically accurate ratios.
    *
-   * deferentR: radius of deferent (fraction of scale)
-   * epicycleR: radius of epicycle (fraction of scale)
-   * omegaD: angular velocity of deferent center (rad/s at 1x)
-   * omegaE: angular velocity on epicycle (rad/s at 1x)
+   * In Ptolemy's model (Almagest):
+   * - OUTER planets (Mars, Jupiter, Saturn):
+   *     deferent rate = planet's sidereal angular velocity
+   *     epicycle rate = Sun's mean angular velocity (same for all outer planets)
+   *     Retrograde occurs when the planet is on the inner side of its epicycle.
    *
-   * Historical note: for outer planets, the epicycle period matches
-   * the planet's synodic period, and the deferent matches the sidereal period.
-   * The epicycle radius relative to deferent determines the retrograde loop size.
+   * - INNER planets (Mercury, Venus):
+   *     deferent rate = Sun's mean angular velocity (they orbit with the Sun)
+   *     epicycle rate = planet's own sidereal angular velocity
+   *     They oscillate around the Sun's position.
    *
-   * Mars has the largest epicycle-to-deferent ratio (~0.39), producing
-   * the most dramatic retrograde loops.
+   * - Sun: moves on a simple deferent (no epicycle).
+   * - Moon: fast deferent, small epicycle.
+   *
+   * Base rate: Sun completes one orbit in ~12 seconds at 1x → ωSun ≈ 0.524 rad/s
+   * Planet sidereal rates derived from real orbital periods relative to Earth's year.
    */
+  const OMEGA_SUN = 0.524;  // Sun's mean angular velocity (rad/s at 1x speed)
+
+  /*
+   * Historically accurate Ptolemaic layout (Almagest):
+   *
+   * INNER PLANETS share the Sun's deferent. Their epicycle centers
+   * always coincide with the mean Sun position. The epicycle makes
+   * them oscillate ahead/behind the Sun, producing elongation.
+   *   - Mercury epicycle/deferent ≈ 22.5/60 → max elongation ~22°
+   *   - Venus epicycle/deferent ≈ 43.17/60 → max elongation ~46°
+   *
+   * OUTER PLANETS have their own deferents (sidereal rates).
+   * Their epicycles rotate at the Sun's rate, producing retrograde
+   * when the planet is on the near side of its epicycle.
+   */
+  const SUN_DEFERENT = 0.24;  // Sun's deferent radius (shared by inner planets)
+
   const bodies = [
     {
       name: 'Moon',
-      deferentR: 0.10,
-      epicycleR: 0.02,
-      omegaD: 2.2,
-      omegaE: 9.0,
+      deferentR: 0.05,
+      epicycleR: 0.008,
+      omegaD: OMEGA_SUN * 13.37,             // Moon orbits ~13.37x per year
+      omegaE: OMEGA_SUN * 13.37 * 1.2,       // Small correction epicycle
       color: '#d1d5db',
-      size: 4,
+      size: 3,
       showEpicycle: false,
       showTrail: false
     },
     {
+      // Inner planet: shares Sun's deferent, epicycle = Mercury's sidereal rate
+      // Almagest ratio: epicycle/deferent ≈ 22.5/60 = 0.375
       name: 'Mercury',
-      deferentR: 0.17,
-      epicycleR: 0.06,
-      omegaD: 1.4,
-      omegaE: 4.2,
+      deferentR: SUN_DEFERENT,
+      epicycleR: SUN_DEFERENT * 0.375,       // ≈ 0.09, max elongation ~22°
+      omegaD: OMEGA_SUN,                     // Moves with the Sun
+      omegaE: OMEGA_SUN * (1 / 0.241),       // Mercury's sidereal rate
       color: '#9ca3af',
       size: 3,
       showEpicycle: true,
       showTrail: false
     },
     {
+      // Inner planet: shares Sun's deferent, epicycle = Venus's sidereal rate
+      // Almagest ratio: epicycle/deferent ≈ 43.17/60 = 0.720
       name: 'Venus',
-      deferentR: 0.25,
-      epicycleR: 0.07,
-      omegaD: 1.0,
-      omegaE: 2.6,
+      deferentR: SUN_DEFERENT,
+      epicycleR: SUN_DEFERENT * 0.720,       // ≈ 0.17, max elongation ~46°
+      omegaD: OMEGA_SUN,                     // Moves with the Sun
+      omegaE: OMEGA_SUN * (1 / 0.615),       // Venus's sidereal rate
       color: '#fbbf24',
-      size: 5,
+      size: 4,
       showEpicycle: true,
       showTrail: false
     },
     {
       name: 'Sun',
-      deferentR: 0.34,
+      deferentR: SUN_DEFERENT,
       epicycleR: 0.0,
-      omegaD: 0.8,
+      omegaD: OMEGA_SUN,
       omegaE: 0,
       color: '#fcd34d',
-      size: 9,
+      size: 8,
       showEpicycle: false,
       showTrail: false
     },
     {
+      // Outer planet: deferent = Mars's sidereal rate, epicycle = Sun's rate
+      // Almagest ratio: epicycle/deferent ≈ 39.5/60 = 0.658
+      // This large ratio is physically required — it equals 1 AU / Mars distance (1/1.524).
+      // Mars min (0.13) enters the Sun zone during retrograde — this is correct behavior
+      // (Mars at opposition is closest to Earth and appears opposite the Sun).
       name: 'Mars',
-      deferentR: 0.48,
-      epicycleR: 0.185,   // ~0.39 × deferentR — historically accurate ratio
-      omegaD: 0.42,
-      omegaE: 0.80,       // Epicycle rate > deferent rate → retrograde loops
+      deferentR: 0.40,
+      epicycleR: 0.27,     // Ratio 0.675 ≈ Almagest 0.658. Produces clear retrograde loops.
+      omegaD: OMEGA_SUN * (1 / 1.881),  // Mars sidereal period = 1.881 yr
+      omegaE: OMEGA_SUN,                 // Epicycle at Sun's rate
       color: '#f87171',
-      size: 5,
+      size: 4,
       showEpicycle: true,
       showTrail: true
     },
     {
+      // Outer planet: deferent = Jupiter's sidereal rate, epicycle = Sun's rate
+      // Almagest ratio ≈ 11.5/60 ≈ 0.19 (1 AU / 5.2 AU)
       name: 'Jupiter',
-      deferentR: 0.62,
-      epicycleR: 0.11,
-      omegaD: 0.22,
-      omegaE: 0.80,
+      deferentR: 0.76,
+      epicycleR: 0.08,
+      omegaD: OMEGA_SUN * (1 / 11.86),  // Jupiter sidereal period = 11.86 yr
+      omegaE: OMEGA_SUN,                  // Epicycle at Sun's rate
       color: '#fb923c',
-      size: 7,
+      size: 6,
       showEpicycle: true,
       showTrail: true
     },
     {
+      // Outer planet: deferent = Saturn's sidereal rate, epicycle = Sun's rate
+      // Almagest ratio ≈ 6.5/60 ≈ 0.11 (1 AU / 9.5 AU)
       name: 'Saturn',
-      deferentR: 0.78,
-      epicycleR: 0.08,
-      omegaD: 0.12,
-      omegaE: 0.80,
+      deferentR: 0.94,
+      epicycleR: 0.05,
+      omegaD: OMEGA_SUN * (1 / 29.46),  // Saturn sidereal period = 29.46 yr
+      omegaE: OMEGA_SUN,                  // Epicycle at Sun's rate
       color: '#d4a056',
-      size: 6,
+      size: 5,
       showEpicycle: true,
       showTrail: true
     }
@@ -121,7 +156,7 @@
     height = canvas.height / (window.devicePixelRatio || 1);
     centerX = width / 2;
     centerY = height / 2;
-    scale = Math.min(width, height) * 0.46;
+    scale = Math.min(width, height) * 0.43;
   }
 
   /**
