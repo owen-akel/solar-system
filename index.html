@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Evolution of Solar System Models</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app">
+
+    <!-- Header -->
+    <header class="header">
+      <h1>The Evolution of Solar System Models</h1>
+      <p class="subtitle">From crystalline spheres to Newtonian gravity &mdash; how humanity mapped the heavens</p>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+      <button class="tab-btn" data-tab="aristotle">
+        Aristotle
+        <span class="tab-dates">384 &ndash; 322 BCE</span>
+      </button>
+      <button class="tab-btn" data-tab="ptolemy">
+        Ptolemy
+        <span class="tab-dates">c. 100 &ndash; 170 CE</span>
+      </button>
+      <button class="tab-btn" data-tab="kepler">
+        Kepler
+        <span class="tab-dates">1571 &ndash; 1630</span>
+      </button>
+      <button class="tab-btn" data-tab="modern">
+        Modern Model
+        <span class="tab-dates">Newton &amp; beyond</span>
+      </button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+      <!-- Aristotle Panel -->
+      <section id="aristotle" class="tab-panel">
+        <div class="panel-layout">
+          <div class="canvas-container">
+            <canvas id="aristotle-canvas"></canvas>
+          </div>
+          <aside class="info-panel">
+            <h2>Aristotle's Crystalline Spheres</h2>
+            <p class="astronomer-dates">384 &ndash; 322 BCE &middot; Ancient Greece</p>
+            <div class="description" id="aristotle-desc"></div>
+            <h3>Key Concepts</h3>
+            <ul class="key-concepts" id="aristotle-concepts"></ul>
+          </aside>
+        </div>
+      </section>
+
+      <!-- Ptolemy Panel -->
+      <section id="ptolemy" class="tab-panel">
+        <div class="panel-layout">
+          <div class="canvas-container">
+            <canvas id="ptolemy-canvas"></canvas>
+          </div>
+          <aside class="info-panel">
+            <h2>Ptolemy's Geocentric Model</h2>
+            <p class="astronomer-dates">c. 100 &ndash; 170 CE &middot; Roman Egypt</p>
+            <div class="description" id="ptolemy-desc"></div>
+            <h3>Key Concepts</h3>
+            <ul class="key-concepts" id="ptolemy-concepts"></ul>
+          </aside>
+        </div>
+      </section>
+
+      <!-- Kepler Panel -->
+      <section id="kepler" class="tab-panel">
+        <div class="panel-layout">
+          <div class="canvas-container">
+            <canvas id="kepler-canvas"></canvas>
+          </div>
+          <aside class="info-panel">
+            <h2>Kepler's Elliptical Orbits</h2>
+            <p class="astronomer-dates">1571 &ndash; 1630 &middot; Holy Roman Empire</p>
+            <div class="description" id="kepler-desc"></div>
+            <h3>Key Concepts</h3>
+            <ul class="key-concepts" id="kepler-concepts"></ul>
+            <h3 style="margin-top: var(--space-lg);">Visual Toggles</h3>
+            <div class="toggle-group" style="margin-top: var(--space-sm);">
+              <button class="toggle-btn kepler-toggle active" data-option="showOrbits">Orbits</button>
+              <button class="toggle-btn kepler-toggle active" data-option="showSweptArea">Swept Area</button>
+              <button class="toggle-btn kepler-toggle" data-option="showFoci">Foci</button>
+              <button class="toggle-btn kepler-toggle active" data-option="showLabels">Labels</button>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- Modern Panel -->
+      <section id="modern" class="tab-panel">
+        <div class="panel-layout">
+          <div class="canvas-container">
+            <canvas id="modern-canvas"></canvas>
+          </div>
+          <aside class="info-panel">
+            <h2>The Modern Solar System</h2>
+            <p class="astronomer-dates">Newton (1687) to present</p>
+            <div class="description" id="modern-desc"></div>
+            <h3>Key Concepts</h3>
+            <ul class="key-concepts" id="modern-concepts"></ul>
+          </aside>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Controls Bar -->
+    <div class="controls-bar">
+      <div class="control-group">
+        <button id="play-pause-btn" class="btn active">⏸ Pause</button>
+        <button id="reset-btn" class="btn">↺ Reset</button>
+      </div>
+      <div class="control-group">
+        <label for="speed-slider">Speed:</label>
+        <input type="range" id="speed-slider" class="speed-slider" min="0.1" max="5" step="0.1" value="1">
+        <span id="speed-value" class="speed-value">1.0x</span>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>
+        PHYS II &middot; Spring 2026 &middot; Dartmouth College &middot;
+        Daniella Nichols, Owen Akel, Warren Klein &middot;
+        <a href="#" id="bib-link">Bibliography</a>
+      </p>
+    </footer>
+
+    <!-- Bibliography Modal -->
+    <div id="bib-modal" class="modal-overlay">
+      <div class="modal">
+        <button class="close-btn">&times;</button>
+        <h2>Bibliography</h2>
+        <div class="bib-entry">Dreyer, J. L. E. <em>A History of Astronomy from Thales to Kepler</em>. 2nd ed., Dover Publications, 1953.</div>
+        <div class="bib-entry">Kuhn, Thomas S. <em>The Copernican Revolution: Planetary Astronomy in the Development of Western Thought</em>. Harvard University Press, 1957.</div>
+        <div class="bib-entry">Ptolemy. <em>Ptolemy's Almagest</em>. Translated by G. J. Toomer, Princeton University Press, 1998.</div>
+        <div class="bib-entry">Linton, Christopher M. <em>From Eudoxus to Einstein: A History of Mathematical Astronomy</em>. Cambridge University Press, 2004.</div>
+        <div class="bib-entry">Kepler, Johannes. <em>Astronomia Nova</em>. Translated by William H. Donahue, Green Lion Press, 2015.</div>
+        <div class="bib-entry">NASA. "Planetary Fact Sheet." NASA Goddard Space Flight Center, <em>nssdc.gsfc.nasa.gov/planetary/factsheet/</em>. Accessed May 2026.</div>
+        <div class="bib-entry">Goldstein, Bernard R. "Saving the Phenomena: The Background to Ptolemy's Planetary Theory." <em>Journal for the History of Astronomy</em>, vol. 28, no. 1, 1997, pp. 1&ndash;12.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+  <script src="js/aristotle.js"></script>
+  <script src="js/ptolemy.js"></script>
+  <script src="js/kepler.js"></script>
+  <script src="js/modern.js"></script>
+  <script src="js/content-loader.js"></script>
+</body>
+</html>
