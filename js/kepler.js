@@ -26,6 +26,9 @@
     showLabels: true
   };
 
+  // Selected planet for detail view (null = no selection, shows main view)
+  let selectedPlanet = null;
+
   // Swept area tracking
   const AREA_SWEEP_INTERVAL = 1.5;  // seconds between area sweep marks
   let lastAreaTime = 0;
@@ -224,81 +227,192 @@
     }
   }
 
-  function drawSweptArea(planet) {
-    if (!options.showSweptArea) return;
-
-    const pos = getPlanetPosition(planet, time);
-
-    // Draw current radius vector (Sun to planet)
-    const px = centerX + pos.x;
-    const py = centerY - pos.y;
-
-    ctx.strokeStyle = planet.color;
-    ctx.globalAlpha = 0.25;
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.lineTo(px, py);
-    ctx.stroke();
-    ctx.globalAlpha = 1.0;
-
-    /*
-     * Kepler's 2nd Law: Equal areas in equal times.
-     *
-     * We show two wedges per planet:
-     *   A₁ — near perihelion (closest to Sun): wide angle, short radius
-     *   A₂ — near aphelion (farthest from Sun): narrow angle, long radius
-     *
-     * Both wedges span the same time duration, so A₁ = A₂.
-     * The visual difference in shape demonstrates the law.
-     * All planets use displayE (exaggerated eccentricity) so the
-     * area difference is clearly visible even for near-circular orbits.
-     */
-    const sweepFraction = 0.06;  // fraction of orbital period for each wedge
+  /**
+   * Draw A₁/A₂ swept area wedges for a single planet.
+   * Only called in the detail overlay when a planet is selected.
+   */
+  function drawSweptAreaWedges(planet, cx, cy, s) {
+    const sweepFraction = 0.06;
     const sweepDuration = sweepFraction * (planet.T * BASE_PERIOD);
     const numSteps = 40;
     const dt = sweepDuration / numSteps;
 
-    // Perihelion: true anomaly θ = 0, so mean anomaly M = 0 → t = 0
     const perihelionStart = 0;
-    // Aphelion: true anomaly θ = π → mean anomaly M = π → t = π/ωbase
     const aphelionStart = Math.PI / planet.omegaBase;
 
-    const drawWedge = (startTime) => {
+    const drawWedge = (startTime, label) => {
       ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
+      ctx.moveTo(cx, cy);
       const points = [];
       for (let i = 0; i <= numSteps; i++) {
         const t = startTime + i * dt;
-        const p = getPlanetPosition(planet, t);
-        const wx = centerX + p.x;
-        const wy = centerY - p.y;
+        const e = planet.displayE;
+        const M = planet.omegaBase * t;
+        const E = solveKeplersEquation(M % (2 * Math.PI), e);
+        const theta = eccentricToTrue(E, e);
+        const r = planet.a * (1 - e * Math.cos(E));
+        const displayR = scaleDistance(r) * s;
+        const wx = cx + displayR * Math.cos(theta);
+        const wy = cy - displayR * Math.sin(theta);
         ctx.lineTo(wx, wy);
         points.push({ x: wx, y: wy });
       }
       ctx.closePath();
 
-      // Fill the wedge
+      // Fill
       ctx.fillStyle = planet.color;
-      ctx.globalAlpha = 0.18;
+      ctx.globalAlpha = 0.25;
       ctx.fill();
 
-      // Outline the wedge edges
+      // Outline edges
       ctx.strokeStyle = planet.color;
-      ctx.globalAlpha = 0.4;
-      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.5;
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
+      ctx.moveTo(cx, cy);
       ctx.lineTo(points[0].x, points[0].y);
-      ctx.moveTo(centerX, centerY);
+      ctx.moveTo(cx, cy);
       ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
       ctx.stroke();
       ctx.globalAlpha = 1.0;
 
+      // Label
+      const mid = points[Math.floor(points.length / 2)];
+      const dx = mid.x - cx;
+      const dy = mid.y - cy;
+      const labelX = cx + dx * 0.5;
+      const labelY = cy + dy * 0.5;
+      ctx.fillStyle = planet.color;
+      ctx.globalAlpha = 0.8;
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, labelX, labelY);
+      ctx.globalAlpha = 1.0;
     };
 
-    drawWedge(perihelionStart);
-    drawWedge(aphelionStart);
+    drawWedge(perihelionStart, 'A₁');
+    drawWedge(aphelionStart, 'A₂');
+  }
+
+  /**
+   * Draw the detail overlay for the selected planet.
+   * Shows a zoomed-in view of the planet's orbit with A₁/A₂ wedges,
+   * plus the rest of the solar system dimmed behind.
+   */
+  function drawDetailOverlay(planet) {
+    // Semi-transparent backdrop
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+    ctx.fillRect(0, 0, width, height);
+
+    // Compute a dedicated scale for this planet's orbit to fill ~70% of the overlay
+    const e = planet.displayE;
+    const aphelionR = planet.a * (1 + e);
+    const displayAphelion = scaleDistance(aphelionR);
+    const detailScale = Math.min(width, height) * 0.32 / displayAphelion;
+
+    const ocx = width / 2;
+    const ocy = height / 2;
+
+    // Draw the orbit path
+    const numPoints = 180;
+    ctx.strokeStyle = planet.color;
+    ctx.globalAlpha = 0.4;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i <= numPoints; i++) {
+      const angle = (i / numPoints) * Math.PI * 2;
+      const r = planet.a * (1 - e * e) / (1 + e * Math.cos(angle));
+      const dr = scaleDistance(r) * detailScale;
+      const px = ocx + dr * Math.cos(angle);
+      const py = ocy - dr * Math.sin(angle);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.globalAlpha = 1.0;
+
+    // Draw Sun at focus
+    const sunGlow = ctx.createRadialGradient(ocx, ocy, 0, ocx, ocy, 20);
+    sunGlow.addColorStop(0, 'rgba(252, 211, 77, 0.5)');
+    sunGlow.addColorStop(1, 'rgba(252, 211, 77, 0)');
+    ctx.fillStyle = sunGlow;
+    ctx.beginPath();
+    ctx.arc(ocx, ocy, 20, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fcd34d';
+    ctx.beginPath();
+    ctx.arc(ocx, ocy, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fcd34d';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Sun', ocx, ocy + 20);
+
+    // Draw A₁ / A₂ wedges using the detail scale
+    drawSweptAreaWedges(planet, ocx, ocy, detailScale);
+
+    // Draw the planet at current position
+    const pos = getPlanetPosition(planet, time);
+    // Recompute position with detail scale
+    const eDisp = planet.displayE;
+    const M = planet.omegaBase * time;
+    const E = solveKeplersEquation(M % (2 * Math.PI), eDisp);
+    const theta = eccentricToTrue(E, eDisp);
+    const r = planet.a * (1 - eDisp * Math.cos(E));
+    const displayR = scaleDistance(r) * detailScale;
+    const ppx = ocx + displayR * Math.cos(theta);
+    const ppy = ocy - displayR * Math.sin(theta);
+
+    // Radius vector
+    ctx.strokeStyle = planet.color;
+    ctx.globalAlpha = 0.35;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(ocx, ocy);
+    ctx.lineTo(ppx, ppy);
+    ctx.stroke();
+    ctx.globalAlpha = 1.0;
+
+    // Planet dot
+    ctx.fillStyle = planet.color;
+    ctx.beginPath();
+    ctx.arc(ppx, ppy, planet.size + 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Planet name
+    ctx.fillStyle = planet.color;
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(planet.name, ppx, ppy - planet.size - 10);
+
+    // Title and info
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${planet.name} — Kepler's 2nd Law`, width / 2, 30);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('A₁ = A₂ : Equal areas swept in equal time', width / 2, 50);
+    ctx.fillText('A₁ near perihelion (wide, short)  •  A₂ near aphelion (narrow, long)', width / 2, 68);
+
+    // Planet data
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'left';
+    const infoX = 16;
+    const infoY = height - 60;
+    ctx.fillText(`Semi-major axis: ${planet.a.toFixed(3)} AU`, infoX, infoY);
+    ctx.fillText(`Eccentricity: ${planet.e.toFixed(4)} (exaggerated to ${planet.displayE.toFixed(2)} for visibility)`, infoX, infoY + 16);
+    ctx.fillText(`Period: ${planet.T.toFixed(2)} years   T² = ${(planet.T * planet.T).toFixed(2)}   a³ = ${(planet.a ** 3).toFixed(2)}`, infoX, infoY + 32);
+
+    // Close hint
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Click anywhere to close', width / 2, height - 12);
   }
 
   function drawPlanet(planet) {
@@ -333,39 +447,64 @@
   }
 
   function drawLawAnnotations() {
-    // Show Kepler's 3rd law: period info
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-    ctx.font = '11px sans-serif';
-    ctx.textAlign = 'left';
+    // no-op: annotations removed for clean view
+  }
 
-    const y0 = 20;
-    ctx.fillText("Kepler's Laws:", 10, y0);
-    ctx.font = '10px sans-serif';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-    ctx.fillText('1. Orbits are ellipses (Sun at one focus)', 10, y0 + 16);
-    ctx.fillText('2. Equal areas in equal times: A₁ = A₂ (shaded wedges)', 10, y0 + 30);
-    ctx.fillText('3. T² ∝ a³ (see periods below)', 10, y0 + 44);
+  /**
+   * Handle clicks on the canvas.
+   * - In main view: check if click is near a planet → open detail overlay
+   * - In detail view: click anywhere → close overlay
+   */
+  function handleClick(event) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = event.clientX - rect.left;
+    const my = event.clientY - rect.top;
 
-    // Period table — all 8 planets
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.font = '9px monospace';
-    let ty = y0 + 62;
-    ctx.fillText('Planet     a(AU)    T(yr)     T²         a³', 10, ty);
-    planets.forEach(p => {
-      ty += 13;
-      const T2 = (p.T * p.T).toFixed(2);
-      const a3 = (p.a * p.a * p.a).toFixed(2);
-      ctx.fillText(
-        `${p.name.padEnd(10)} ${p.a.toFixed(3).padStart(6)}   ${p.T.toFixed(2).padStart(7)}   ${T2.padStart(9)}   ${a3.padStart(9)}`,
-        10, ty
-      );
-    });
+    if (selectedPlanet !== null) {
+      // Close detail view
+      selectedPlanet = null;
+      draw();
+      return;
+    }
 
-    // Scaling notes
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-    ctx.font = '9px sans-serif';
-    ctx.fillText('Distances scaled (a^0.5) for visibility', 10, height - 24);
-    ctx.fillText('Eccentricities exaggerated — real values shown in table above', 10, height - 10);
+    // Check if click is near any planet (hit radius = planet size + 12px for easy clicking)
+    for (let i = 0; i < planets.length; i++) {
+      const p = planets[i];
+      const pos = getPlanetPosition(p, time);
+      const px = centerX + pos.x;
+      const py = centerY - pos.y;
+      const dist = Math.sqrt((mx - px) ** 2 + (my - py) ** 2);
+      if (dist < p.size + 12) {
+        selectedPlanet = p;
+        draw();
+        return;
+      }
+    }
+  }
+
+  /** Update cursor style on hover over planets */
+  function handleMouseMove(event) {
+    if (selectedPlanet !== null) {
+      canvas.style.cursor = 'pointer';
+      return;
+    }
+    const rect = canvas.getBoundingClientRect();
+    const mx = event.clientX - rect.left;
+    const my = event.clientY - rect.top;
+
+    let hovering = false;
+    for (let i = 0; i < planets.length; i++) {
+      const p = planets[i];
+      const pos = getPlanetPosition(p, time);
+      const px = centerX + pos.x;
+      const py = centerY - pos.y;
+      const dist = Math.sqrt((mx - px) ** 2 + (my - py) ** 2);
+      if (dist < p.size + 12) {
+        hovering = true;
+        break;
+      }
+    }
+    canvas.style.cursor = hovering ? 'pointer' : 'default';
   }
 
   function draw() {
@@ -375,15 +514,32 @@
     // Draw orbits
     planets.forEach(p => drawEllipseOrbit(p));
 
-    // Draw swept areas
-    planets.forEach(p => drawSweptArea(p));
-
     drawSun();
 
-    // Draw planets
-    planets.forEach(p => drawPlanet(p));
+    // Draw planets (with radius vectors)
+    planets.forEach(p => {
+      // Draw radius vector from Sun to planet
+      const pos = getPlanetPosition(p, time);
+      const px = centerX + pos.x;
+      const py = centerY - pos.y;
+      ctx.strokeStyle = p.color;
+      ctx.globalAlpha = 0.15;
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(px, py);
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+
+      drawPlanet(p);
+    });
 
     drawLawAnnotations();
+
+    // Detail overlay on top if a planet is selected
+    if (selectedPlanet !== null) {
+      drawDetailOverlay(selectedPlanet);
+    }
   }
 
   function animate(timestamp) {
@@ -403,8 +559,11 @@
       ctx = canvas.getContext('2d');
       time = 0;
       lastTimestamp = null;
+      selectedPlanet = null;
       areaMarks = [];
       lastAreaTime = 0;
+      canvas.addEventListener('click', handleClick);
+      canvas.addEventListener('mousemove', handleMouseMove);
       computeLayout();
       draw();
     },
@@ -420,6 +579,10 @@
         cancelAnimationFrame(animationId);
         animationId = null;
       }
+      selectedPlanet = null;
+      canvas.removeEventListener('click', handleClick);
+      canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.style.cursor = 'default';
     },
 
     resize() {
