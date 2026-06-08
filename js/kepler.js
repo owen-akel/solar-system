@@ -448,10 +448,10 @@
 
   function drawLawAnnotations() {
     if (selectedPlanet !== null) return;  // hide when detail overlay is open
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.font = '11px sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.font = '12px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Click on any planet to see Kepler\'s 2nd Law', width / 2, height - 14);
+    ctx.fillText('Click on any planet to see Kepler\'s 2nd Law', width / 2, height - 30);
   }
 
   /**
