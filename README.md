@@ -5,7 +5,7 @@
 
 ## How to Run
 
-[Open `[https://owen-akel.github.io/solar-system/]` in any modern browser (Chrome, Firefox, Safari, Edge). No installation or server required.]
+Open `[https://owen-akel.github.io/solar-system/]` in any modern browser (Chrome, Firefox, Safari, Edge). No installation or server required.
 
 ## Project Description
 
