@@ -15,24 +15,37 @@
       <p class="subtitle">From crystalline spheres to Newtonian gravity &mdash; how humanity mapped the heavens</p>
     </header>
 
-    <!-- Tab Navigation -->
-    <nav class="tab-nav">
-      <button class="tab-btn" data-tab="aristotle">
-        Aristotle
-        <span class="tab-dates">384 &ndash; 322 BCE</span>
-      </button>
-      <button class="tab-btn" data-tab="ptolemy">
-        Ptolemy
-        <span class="tab-dates">c. 100 &ndash; 170 CE</span>
-      </button>
-      <button class="tab-btn" data-tab="kepler">
-        Kepler
-        <span class="tab-dates">1571 &ndash; 1630</span>
-      </button>
-      <button class="tab-btn" data-tab="modern">
-        Modern Model
-        <span class="tab-dates">Newton &amp; beyond</span>
-      </button>
+    <!-- Timeline Navigation -->
+    <nav class="timeline-nav">
+      <div class="timeline-track">
+        <div class="timeline-progress"></div>
+      </div>
+      <div class="timeline-nodes">
+        <button class="timeline-node" data-tab="aristotle" data-index="0">
+          <span class="node-dot"></span>
+          <span class="node-label">Aristotle</span>
+          <span class="node-date">384 &ndash; 322 BCE</span>
+        </button>
+        <button class="timeline-node" data-tab="ptolemy" data-index="1">
+          <span class="node-dot"></span>
+          <span class="node-label">Ptolemy</span>
+          <span class="node-date">c. 100 &ndash; 170 CE</span>
+        </button>
+        <button class="timeline-node" data-tab="kepler" data-index="2">
+          <span class="node-dot"></span>
+          <span class="node-label">Kepler</span>
+          <span class="node-date">1571 &ndash; 1630</span>
+        </button>
+        <button class="timeline-node" data-tab="modern" data-index="3">
+          <span class="node-dot"></span>
+          <span class="node-label">Modern</span>
+          <span class="node-date">Newton &amp; beyond</span>
+        </button>
+      </div>
+      <div class="timeline-arrows">
+        <button class="timeline-arrow timeline-prev" aria-label="Previous era">&larr;</button>
+        <button class="timeline-arrow timeline-next" aria-label="Next era">&rarr;</button>
+      </div>
     </nav>
 
     <!-- Main Content -->
@@ -40,77 +53,49 @@
 
       <!-- Aristotle Panel -->
       <section id="aristotle" class="tab-panel">
-        <div class="panel-layout">
-          <div class="canvas-container">
-            <canvas id="aristotle-canvas"></canvas>
-          </div>
-          <aside class="info-panel">
-            <h2>Aristotle's Crystalline Spheres</h2>
-            <p class="astronomer-dates">384 &ndash; 322 BCE &middot; Ancient Greece</p>
-            <div class="description" id="aristotle-desc"></div>
-            <h3>Key Concepts</h3>
-            <ul class="key-concepts" id="aristotle-concepts"></ul>
-          </aside>
+        <div class="canvas-container">
+          <canvas id="aristotle-canvas"></canvas>
+          <button class="info-btn" data-tab="aristotle" title="Show description">ℹ</button>
         </div>
       </section>
 
       <!-- Ptolemy Panel -->
       <section id="ptolemy" class="tab-panel">
-        <div class="panel-layout">
-          <div class="canvas-container">
-            <canvas id="ptolemy-canvas"></canvas>
-          </div>
-          <aside class="info-panel">
-            <h2>Ptolemy's Geocentric Model</h2>
-            <p class="astronomer-dates">c. 100 &ndash; 170 CE &middot; Roman Egypt</p>
-            <div class="description" id="ptolemy-desc"></div>
-            <h3>Key Concepts</h3>
-            <ul class="key-concepts" id="ptolemy-concepts"></ul>
-          </aside>
+        <div class="canvas-container">
+          <canvas id="ptolemy-canvas"></canvas>
+          <button class="info-btn" data-tab="ptolemy" title="Show description">ℹ</button>
         </div>
       </section>
 
       <!-- Kepler Panel -->
       <section id="kepler" class="tab-panel">
-        <div class="panel-layout">
-          <div class="canvas-container">
-            <canvas id="kepler-canvas"></canvas>
-          </div>
-          <aside class="info-panel">
-            <h2>Kepler's Elliptical Orbits</h2>
-            <p class="astronomer-dates">1571 &ndash; 1630 &middot; Holy Roman Empire</p>
-            <div class="description" id="kepler-desc"></div>
-            <h3>Key Concepts</h3>
-            <ul class="key-concepts" id="kepler-concepts"></ul>
-            <p class="interaction-hint" style="margin-top: var(--space-lg); opacity: 0.6; font-size: 0.85rem; font-style: italic;">Click on any planet in the animation to see Kepler's 2nd Law in detail.</p>
-            <h3 style="margin-top: var(--space-lg);">Visual Toggles</h3>
-            <div class="toggle-group" style="margin-top: var(--space-sm);">
-              <button class="toggle-btn kepler-toggle active" data-option="showOrbits">Orbits</button>
-              <button class="toggle-btn kepler-toggle active" data-option="showSweptArea">Swept Area</button>
-              <button class="toggle-btn kepler-toggle" data-option="showFoci">Foci</button>
-              <button class="toggle-btn kepler-toggle active" data-option="showLabels">Labels</button>
-            </div>
-          </aside>
+        <div class="canvas-container">
+          <canvas id="kepler-canvas"></canvas>
+          <button class="info-btn" data-tab="kepler" title="Show description">ℹ</button>
         </div>
       </section>
 
       <!-- Modern Panel -->
       <section id="modern" class="tab-panel">
-        <div class="panel-layout">
-          <div class="canvas-container">
-            <canvas id="modern-canvas"></canvas>
-          </div>
-          <aside class="info-panel">
-            <h2>The Modern Solar System</h2>
-            <p class="astronomer-dates">Newton (1687) to present</p>
-            <div class="description" id="modern-desc"></div>
-            <h3>Key Concepts</h3>
-            <ul class="key-concepts" id="modern-concepts"></ul>
-          </aside>
+        <div class="canvas-container">
+          <canvas id="modern-canvas"></canvas>
+          <button class="info-btn" data-tab="modern" title="Show description">ℹ</button>
         </div>
       </section>
 
     </main>
+
+    <!-- Description Popup (shown on era switch) -->
+    <div id="desc-popup" class="desc-popup-overlay">
+      <div class="desc-popup">
+        <h2 id="desc-popup-title"></h2>
+        <p class="desc-popup-dates" id="desc-popup-dates"></p>
+        <div class="desc-popup-body" id="desc-popup-body"></div>
+        <h3>Key Concepts</h3>
+        <ul class="desc-popup-concepts" id="desc-popup-concepts"></ul>
+        <button class="desc-popup-btn" id="desc-popup-close">See Model &rarr;</button>
+      </div>
+    </div>
 
     <!-- Controls Bar -->
     <div class="controls-bar">
