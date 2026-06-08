@@ -306,11 +306,7 @@
   }
 
   function drawRetrogradeAnnotation() {
-    // Add a small annotation about retrograde
-    ctx.fillStyle = 'rgba(248, 113, 113, 0.5)';
-    ctx.font = 'italic 11px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('Watch Mars trace retrograde loops →', 10, height - 10);
+    // no-op: annotations removed for clean view
   }
 
   function draw() {

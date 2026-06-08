@@ -229,11 +229,7 @@
   }
 
   function drawLegend() {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.font = '10px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('Distances scaled (a^0.45) for visibility', 10, height - 25);
-    ctx.fillText('Orbital periods in correct ratios (T² = a³)', 10, height - 10);
+    // no-op: annotations removed for clean view
   }
 
   function draw() {
