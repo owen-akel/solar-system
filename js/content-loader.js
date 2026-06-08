@@ -63,26 +63,13 @@
     }
   };
 
-  function loadContent() {
-    for (const [modelId, data] of Object.entries(contentData)) {
-      // Load description paragraphs
-      const descEl = document.getElementById(`${modelId}-desc`);
-      if (descEl) {
-        descEl.innerHTML = data.description.map(p => `<p>${p}</p>`).join('');
-      }
-
-      // Load key concepts
-      const conceptsEl = document.getElementById(`${modelId}-concepts`);
-      if (conceptsEl) {
-        conceptsEl.innerHTML = data.concepts.map(c => `<li>${c}</li>`).join('');
-      }
-    }
-  }
-
-  // Load on DOM ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadContent);
-  } else {
-    loadContent();
+  // Expose content globally so the description popup can access it
+  // Format: { description: "html string", keyConcepts: ["html", ...] }
+  window._contentData = {};
+  for (const [modelId, data] of Object.entries(contentData)) {
+    window._contentData[modelId] = {
+      description: data.description.map(p => `<p>${p}</p>`).join(''),
+      keyConcepts: data.concepts
+    };
   }
 })();
